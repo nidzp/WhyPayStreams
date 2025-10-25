@@ -79,7 +79,7 @@
     .pill.rent { background: #feebc8; color: #7c2d12; }
     .pill.buy { background: #fed7d7; color: #742a2a; }
     .pill.hd { background: #d6bcfa; color: #44337a; }
-    .pill.4k, .pill.uhd { background: #b794f4; color: #322659; }
+    .pill.uhd { background: #b794f4; color: #322659; }
     label {
       display: block;
       margin-bottom: 6px;
@@ -260,8 +260,8 @@
           <textarea id="aiPrompt" rows="3" placeholder="Napiši kratak sažetak filma Inception i predloži 3 slična filma..."></textarea>
         </div>
         <div class="col" style="flex: 1">
-          <label>AI Provider</label>
-          <select id="aiProvider">
+          <label for="aiProvider">AI Provider</label>
+          <select id="aiProvider" title="Select AI provider for suggestions">
             <option value="cloudflare">Cloudflare Workers AI</option>
             <option value="groq">Groq (LLaMA 3.1)</option>
           </select>
