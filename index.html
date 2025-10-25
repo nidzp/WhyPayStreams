@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="sr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MVP Streaming Finder (legal)</title>
+  <link rel="preconnect" href="https://image.tmdb.org" />
+  <style>
+    * { box-sizing: border-box; }
+    body { 
+      font-family: system-ui, -apple-system, sans-serif; 
+      margin: 0;
+      padding: 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 {
+      margin: 0 0 24px 0;
+      color: #1a202c;
+      font-size: 2.5rem;
+    }
+    .subtitle {
+      color: #718096;
+      margin-bottom: 32px;
+      font-size: 1.1rem;
+    }
+    .row { 
+      display: flex; 
+      gap: 16px; 
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .col { 
+      flex: 1;
+      min-width: 200px;
+    }
+    .card { 
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .movie-card {
+      width: 100%;
+      margin-bottom: 24px;
+      padding: 24px;
+    }
+    .offer-card {
+      width: 280px;
+      margin: 8px;
+    }
+    .pill { 
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: #edf2f7;
+      margin-right: 6px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .pill.free { background: #c6f6d5; color: #22543d; }
+    .pill.sub { background: #bee3f8; color: #2c5282; }
+    .pill.rent { background: #feebc8; color: #7c2d12; }
+    .pill.buy { background: #fed7d7; color: #742a2a; }
+    .pill.hd { background: #d6bcfa; color: #44337a; }
+    .pill.4k, .pill.uhd { background: #b794f4; color: #322659; }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: #2d3748;
+      font-size: 14px;
+    }
+    input, select, button, textarea { 
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e0;
+      font-size: 14px;
+      width: 100%;
+      font-family: inherit;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    button { 
+      cursor: pointer;
+      background: #667eea;
+      color: white;
+      border: none;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #5568d3;
+    }
+    button:active {
+      transform: scale(0.98);
+    }
+    .status {
+      margin-left: 12px;
+      color: #718096;
+      font-style: italic;
+    }
+    .section {
+      margin-top: 32px;
+    }
+    .section-title {
+      font-size: 1.5rem;
+      margin-bottom: 16px;
+      color: #2d3748;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+    }
+    .offer-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .movie-header {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .movie-poster {
+      border-radius: 12px;
+      object-fit: cover;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .movie-info h3 {
+      margin: 0 0 8px 0;
+      font-size: 1.8rem;
+      color: #1a202c;
+    }
+    .movie-info .overview {
+      font-size: 14px;
+      color: #4a5568;
+      line-height: 1.6;
+    }
+    .offer-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 16px 0 12px 0;
+      color: #2d3748;
+    }
+    .offer-card h4 {
+      margin: 8px 0;
+      color: #2d3748;
+    }
+    .offer-price {
+      font-size: 18px;
+      font-weight: 700;
+      color: #667eea;
+      margin: 8px 0;
+    }
+    .offer-link {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 8px 16px;
+      background: #667eea;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .offer-link:hover {
+      background: #5568d3;
+    }
+    .no-results {
+      text-align: center;
+      padding: 48px;
+      color: #718096;
+      font-size: 1.1rem;
+    }
+    .ai-section {
+      background: #f7fafc;
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 32px;
+    }
+    #aiOut {
+      white-space: pre-wrap;
+      margin-top: 16px;
+      padding: 16px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      min-height: 100px;
+      line-height: 1.6;
+      color: #2d3748;
+    }
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #e2e8f0;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎬 MVP Streaming Finder</h1>
+    <p class="subtitle">Pronađi gde da gledaš filmove <strong>legalno</strong> - besplatno ili uz pretplatu</p>
+    
+    <div class="row">
+      <div class="col">
+        <label>Naslov filma</label>
+        <input id="title" placeholder="npr. Inception, Interstellar..." />
+      </div>
+      <div class="col">
+        <label>Jezik (TMDB)</label>
+        <input id="lang" value="sr-RS" placeholder="sr-RS, en-US..." />
+      </div>
+      <div class="col">
+        <label>Region (ISO-3166)</label>
+        <input id="region" value="RS" placeholder="RS, DE, US..." />
+      </div>
+    </div>
+    
+    <div style="margin-top: 16px">
+      <button id="btnSearch">🔍 Pretraži</button>
+      <span class="status" id="status"></span>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">Rezultati</h2>
+      <div id="results"></div>
+    </div>
+
+    <div class="ai-section">
+      <h2 class="section-title">🤖 AI Preporuka (opciono)</h2>
+      <div class="row">
+        <div class="col" style="flex: 3">
+          <label>Upit za AI asistenta</label>
+          <textarea id="aiPrompt" rows="3" placeholder="Napiši kratak sažetak filma Inception i predloži 3 slična filma..."></textarea>
+        </div>
+        <div class="col" style="flex: 1">
+          <label>AI Provider</label>
+          <select id="aiProvider">
+            <option value="cloudflare">Cloudflare Workers AI</option>
+            <option value="groq">Groq (LLaMA 3.1)</option>
+          </select>
+        </div>
+      </div>
+      <button id="btnAI" style="margin-top: 12px">✨ Generiši AI odgovor</button>
+      <div id="aiOut"></div>
+    </div>
+  </div>
+
+  <script>
+    const api = (p) => `http://localhost:8787${p}`;
+
+    async function searchTMDB(q, language){
+      const r = await fetch(api(`/api/search?q=${encodeURIComponent(q)}&language=${encodeURIComponent(language)}`));
+      const j = await r.json();
+      return j.results || [];
+    }
+
+    function posterURL(path, size='w342'){
+      return path ? `https://image.tmdb.org/t/p/${size}${path}` : '';
+    }
+
+    async function fetchOffers(tmdbId, region){
+      const r = await fetch(api(`/api/offers/${tmdbId}?region=${encodeURIComponent(region)}`));
+      return r.json();
+    }
+
+    function renderOfferList(title, list){
+      if(!list || !list.length) {
+        return `<p class="no-results">Nema dostupnih ${title.toLowerCase()} izvora.</p>`;
+      }
+      return list.map(o => `
+        <div class="card offer-card">
+          <div>
+            <span class="pill ${o.type}">${o.type}</span>
+            ${o.quality ? `<span class="pill ${o.quality}">${o.quality.toUpperCase()}</span>` : ''}
+          </div>
+          <h4>${o.name || o.source}</h4>
+          <div class="offer-price">
+            ${o.price ? `${o.price} ${o.currency||'EUR'}` : (o.type==='free' ? 'BESPLATNO' : '—')}
+          </div>
+          ${o.web_url ? `<a href="${o.web_url}" target="_blank" rel="noopener" class="offer-link">Otvori →</a>` : ''}
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('btnSearch').addEventListener('click', async () => {
+      const q = document.getElementById('title').value.trim();
+      const lang = document.getElementById('lang').value.trim() || 'en-US';
+      const region = document.getElementById('region').value.trim() || 'US';
+      const results = document.getElementById('results');
+      const status = document.getElementById('status');
+      
+      if (!q) {
+        alert('Molim vas unesite naziv filma!');
+        return;
+      }
+
+      results.innerHTML = '';
+      status.innerHTML = '<span class="loading"></span> Pretražujem...';
+
+      try {
+        const movies = await searchTMDB(q, lang);
+        status.textContent = '';
+
+        if(!movies.length){ 
+          results.innerHTML = '<p class="no-results">Nema rezultata za uneseni upit. Pokušajte sa drugim nazivom.</p>'; 
+          return; 
+        }
+
+        for(const m of movies.slice(0, 5)){
+          const offers = await fetchOffers(m.id, region);
+          const card = document.createElement('div');
+          card.className = 'card movie-card';
+          card.innerHTML = `
+            <div class="movie-header">
+              ${m.poster_path ? `<img src="${posterURL(m.poster_path)}" width="154" height="231" class="movie-poster" alt="${m.title}" />` : '<div style="width:154px;height:231px;background:#e2e8f0;border-radius:12px;"></div>'}
+              <div class="movie-info">
+                <h3>${m.title} ${m.release_date ? `(${m.release_date.slice(0,4)})` : ''}</h3>
+                <div class="overview">${m.overview || 'Nema opisa dostupnog.'}</div>
+              </div>
+            </div>
+            <h4 class="offer-title">🆓 Top 5 BESPLATNO (legalno)</h4>
+            <div class="offer-list">${renderOfferList('Besplatni', offers.topFree)}</div>
+            <h4 class="offer-title">💳 Top 5 PLAĆENO</h4>
+            <div class="offer-list">${renderOfferList('Plaćeni', offers.topPaid)}</div>
+          `;
+          results.appendChild(card);
+        }
+      } catch (error) {
+        status.textContent = '';
+        results.innerHTML = `<p class="no-results">❌ Greška: ${error.message}</p>`;
+        console.error('Search error:', error);
+      }
+    });
+
+    document.getElementById('btnAI').addEventListener('click', async () => {
+      const provider = document.getElementById('aiProvider').value;
+      const prompt = document.getElementById('aiPrompt').value.trim();
+      const aiOut = document.getElementById('aiOut');
+      
+      if(!prompt) {
+        alert('Molim vas unesite upit za AI!');
+        return;
+      }
+
+      aiOut.innerHTML = '<span class="loading"></span> Generišem odgovor...';
+
+      try {
+        const r = await fetch(api('/api/ai/suggest'), {
+          method:'POST', 
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ provider, prompt })
+        });
+        const j = await r.json();
+        aiOut.textContent = j.text || (j.error ? `Greška: ${j.error}` : 'Nema odgovora od AI.');
+      } catch (error) {
+        aiOut.textContent = `❌ Greška: ${error.message}`;
+        console.error('AI error:', error);
+      }
+    });
+
+    // Enter key support
+    document.getElementById('title').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') document.getElementById('btnSearch').click();
+    });
+    document.getElementById('aiPrompt').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && e.ctrlKey) document.getElementById('btnAI').click();
+    });
+  </script>
+</body>
+</html>
