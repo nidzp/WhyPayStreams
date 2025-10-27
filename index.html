@@ -299,12 +299,13 @@
           <div>
             <span class="pill ${o.type}">${o.type}</span>
             ${o.quality ? `<span class="pill ${o.quality}">${o.quality.toUpperCase()}</span>` : ''}
+            ${o.region ? `<span class="pill" style="background:#e2e8f0;color:#2d3748">${o.region}</span>` : ''}
           </div>
           <h4>${o.name || o.source}</h4>
           <div class="offer-price">
             ${o.price ? `${o.price} ${o.currency||'EUR'}` : (o.type==='free' ? 'BESPLATNO' : '—')}
           </div>
-          ${o.web_url ? `<a href="${o.web_url}" target="_blank" rel="noopener" class="offer-link">Otvori →</a>` : ''}
+          ${o.web_url && o.web_url !== '#' ? `<a href="${o.web_url}" target="_blank" rel="noopener" class="offer-link">Otvori →</a>` : ''}
         </div>
       `).join('');
     }
@@ -337,6 +338,10 @@
           const offers = await fetchOffers(m.id, region);
           const card = document.createElement('div');
           card.className = 'card movie-card';
+          
+          // Prikaži poruku o regionu ako je fallback
+          const regionInfo = offers.message ? `<div style="background:#fef3c7;padding:12px;border-radius:8px;margin-bottom:16px;color:#92400e;font-size:14px;">ℹ️ ${offers.message}</div>` : '';
+          
           card.innerHTML = `
             <div class="movie-header">
               ${m.poster_path ? `<img src="${posterURL(m.poster_path)}" width="154" height="231" class="movie-poster" alt="${m.title}" />` : '<div style="width:154px;height:231px;background:#e2e8f0;border-radius:12px;"></div>'}
@@ -345,6 +350,7 @@
                 <div class="overview">${m.overview || 'Nema opisa dostupnog.'}</div>
               </div>
             </div>
+            ${regionInfo}
             <h4 class="offer-title">🆓 Top 5 BESPLATNO (legalno)</h4>
             <div class="offer-list">${renderOfferList('Besplatni', offers.topFree)}</div>
             <h4 class="offer-title">💳 Top 5 PLAĆENO</h4>

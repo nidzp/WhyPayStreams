@@ -73,8 +73,13 @@ app.get('/api/movie/:id', async (req, res) => {
 app.get('/api/offers/:imdb_or_tmdb', async (req, res) => {
   try {
     const { imdb_or_tmdb } = req.params;
-    const { region = 'RS' } = req.query; // tvoja default regija
+    let { region = 'RS' } = req.query; // tvoja default regija
     
+    // Lista fallback regiona ako glavni nema rezultate
+    const fallbackRegions = [region, 'US', 'GB', 'DE'];
+    let allOffers = [];
+    let usedRegion = region;
+
     // 1) pokušaj direktno po TMDB ID → Watchmode "sources" traže internal ID,
     // pa prvo resolve title_id:
     const lookup = await fetch(`${WATCHMODE}/search/?apiKey=${process.env.WATCHMODE_API_KEY}&search_field=tmdb_id&search_value=${encodeURIComponent(imdb_or_tmdb)}`);
@@ -82,25 +87,41 @@ app.get('/api/offers/:imdb_or_tmdb', async (req, res) => {
     const title = ljson.title_results?.[0];
     
     if (!title) {
-      return res.json({ topFree: [], topPaid: [] });
+      console.log(`Watchmode: No title found for TMDB ID ${imdb_or_tmdb}`);
+      return res.json({ topFree: [], topPaid: [], message: 'Film nije pronađen u Watchmode bazi' });
     }
 
-    const offersR = await fetch(`${WATCHMODE}/title/${title.id}/sources/?apiKey=${process.env.WATCHMODE_API_KEY}&regions=${region}`);
-    const offers = await offersR.json();
+    // Pokušaj sa više regiona
+    for (const tryRegion of fallbackRegions) {
+      try {
+        const offersR = await fetch(`${WATCHMODE}/title/${title.id}/sources/?apiKey=${process.env.WATCHMODE_API_KEY}&regions=${tryRegion}`);
+        const offers = await offersR.json();
+        
+        if (Array.isArray(offers) && offers.length > 0) {
+          allOffers = offers;
+          usedRegion = tryRegion;
+          console.log(`Found ${offers.length} offers for region ${tryRegion}`);
+          break;
+        }
+      } catch (err) {
+        console.log(`Failed to get offers for region ${tryRegion}:`, err.message);
+      }
+    }
 
     // normalizuj i rangiraj
-    const normalized = Array.isArray(offers) ? offers.map(o => ({
-      name: o.name,
+    const normalized = allOffers.map(o => ({
+      name: o.name || 'Unknown',
       source: o.source_id || o.name,
-      type: o.type, // sub|rent|buy|free
-      price: o.price,
-      currency: o.currency,
-      quality: (o.format || '').toLowerCase(), // '4k','hd','sd'
-      web_url: o.web_url
-    })) : [];
+      type: o.type || 'sub', // sub|rent|buy|free
+      price: o.price || 0,
+      currency: o.currency || 'USD',
+      quality: (o.format || 'hd').toLowerCase(), // '4k','hd','sd'
+      web_url: o.web_url || '#',
+      region: usedRegion
+    }));
 
-    const freeLegal = normalized.filter(o => o.type === 'free');
-    const paid = normalized.filter(o => o.type !== 'free');
+    const freeLegal = normalized.filter(o => o.type === 'free' || o.type === 'ads');
+    const paid = normalized.filter(o => o.type !== 'free' && o.type !== 'ads');
 
     const topFree = freeLegal
       .sort((a,b) => rankOffer(b) - rankOffer(a))
@@ -110,7 +131,13 @@ app.get('/api/offers/:imdb_or_tmdb', async (req, res) => {
       .sort((a,b) => rankOffer(b) - rankOffer(a))
       .slice(0, 5);
 
-    res.json({ topFree, topPaid });
+    console.log(`Returning ${topFree.length} free and ${topPaid.length} paid offers from region ${usedRegion}`);
+    res.json({ 
+      topFree, 
+      topPaid, 
+      region: usedRegion,
+      message: usedRegion !== region ? `Prikazani rezultati za region ${usedRegion} (${region} nema podataka)` : null
+    });
   } catch (error) {
     console.error('Offers error:', error);
     res.status(500).json({ error: error.message, topFree: [], topPaid: [] });
