@@ -40,7 +40,39 @@ function rankOffer(o) {
   return quality * 2 + pop * 1.2 + priceScore;
 }
 
-// TMDB: pretraga filma
+// TMDB: pretraga filmova
+app.get('/api/search/movie', async (req, res) => {
+  try {
+    const { q, language = 'en-US' } = req.query;
+    if (!q) {
+      return res.status(400).json({ error: 'Query parameter "q" is required' });
+    }
+    const r = await fetch(`${TMDB}/search/movie?query=${encodeURIComponent(q)}&language=${language}`, { headers: TMDB_HEADERS });
+    const json = await r.json();
+    res.json(json);
+  } catch (error) {
+    console.error('Search error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// TMDB: pretraga serija
+app.get('/api/search/tv', async (req, res) => {
+  try {
+    const { q, language = 'en-US' } = req.query;
+    if (!q) {
+      return res.status(400).json({ error: 'Query parameter "q" is required' });
+    }
+    const r = await fetch(`${TMDB}/search/tv?query=${encodeURIComponent(q)}&language=${language}`, { headers: TMDB_HEADERS });
+    const json = await r.json();
+    res.json(json);
+  } catch (error) {
+    console.error('Search error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Legacy endpoint - podrazumevano pretraga filmova
 app.get('/api/search', async (req, res) => {
   try {
     const { q, language = 'en-US' } = req.query;
@@ -56,7 +88,7 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
-// TMDB: poster i osnovni meta podaci
+// TMDB: poster i osnovni meta podaci (filmovi)
 app.get('/api/movie/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -65,6 +97,19 @@ app.get('/api/movie/:id', async (req, res) => {
     res.json(await r.json());
   } catch (error) {
     console.error('Movie details error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// TMDB: poster i osnovni meta podaci (serije)
+app.get('/api/tv/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { language = 'en-US' } = req.query;
+    const r = await fetch(`${TMDB}/tv/${id}?language=${language}`, { headers: TMDB_HEADERS });
+    res.json(await r.json());
+  } catch (error) {
+    console.error('TV details error:', error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -225,12 +225,23 @@
 <body>
   <div class="container">
     <h1>🎬 MVP Streaming Finder</h1>
-    <p class="subtitle">Pronađi gde da gledaš filmove <strong>legalno</strong> - besplatno ili uz pretplatu</p>
+    <p class="subtitle">Pronađi gde da gledaš filmove i serije <strong>legalno</strong> - besplatno ili uz pretplatu</p>
+    
+    <div style="margin-bottom: 16px;">
+      <label style="margin-right: 24px; font-weight: 600;">
+        <input type="radio" name="mediaType" value="movie" checked style="margin-right: 6px;" />
+        🎬 Filmovi
+      </label>
+      <label style="font-weight: 600;">
+        <input type="radio" name="mediaType" value="tv" style="margin-right: 6px;" />
+        📺 TV Serije
+      </label>
+    </div>
     
     <div class="row">
       <div class="col">
-        <label>Naslov filma</label>
-        <input id="title" placeholder="npr. Inception, Interstellar..." />
+        <label>Naslov</label>
+        <input id="title" placeholder="npr. Inception, Breaking Bad..." />
       </div>
       <div class="col">
         <label>Jezik (TMDB)</label>
@@ -275,8 +286,9 @@
   <script>
     const api = (p) => `http://localhost:8787${p}`;
 
-    async function searchTMDB(q, language){
-      const r = await fetch(api(`/api/search?q=${encodeURIComponent(q)}&language=${encodeURIComponent(language)}`));
+    async function searchTMDB(q, language='en-US'){
+      const mediaType = document.querySelector('input[name="mediaType"]:checked').value;
+      const r = await fetch(api(`/api/search/${mediaType}?q=${encodeURIComponent(q)}&language=${encodeURIComponent(language)}`));
       const j = await r.json();
       return j.results || [];
     }
@@ -314,11 +326,12 @@
       const q = document.getElementById('title').value.trim();
       const lang = document.getElementById('lang').value.trim() || 'en-US';
       const region = document.getElementById('region').value.trim() || 'US';
+      const mediaType = document.querySelector('input[name="mediaType"]:checked').value;
       const results = document.getElementById('results');
       const status = document.getElementById('status');
       
       if (!q) {
-        alert('Molim vas unesite naziv filma!');
+        alert(`Molim vas unesite naziv ${mediaType === 'tv' ? 'serije' : 'filma'}!`);
         return;
       }
 
@@ -326,6 +339,7 @@
       status.innerHTML = '<span class="loading"></span> Pretražujem...';
 
       try {
+        const mediaType = document.querySelector('input[name="mediaType"]:checked').value;
         const movies = await searchTMDB(q, lang);
         status.textContent = '';
 
@@ -342,11 +356,16 @@
           // Prikaži poruku o regionu ako je fallback
           const regionInfo = offers.message ? `<div style="background:#fef3c7;padding:12px;border-radius:8px;margin-bottom:16px;color:#92400e;font-size:14px;">ℹ️ ${offers.message}</div>` : '';
           
+          // Za serije koristi "name" i "first_air_date", za filmove "title" i "release_date"
+          const mediaTitle = m.title || m.name;
+          const mediaYear = m.release_date ? m.release_date.slice(0,4) : (m.first_air_date ? m.first_air_date.slice(0,4) : '');
+          const mediaIcon = mediaType === 'tv' ? '📺' : '🎬';
+          
           card.innerHTML = `
             <div class="movie-header">
-              ${m.poster_path ? `<img src="${posterURL(m.poster_path)}" width="154" height="231" class="movie-poster" alt="${m.title}" />` : '<div style="width:154px;height:231px;background:#e2e8f0;border-radius:12px;"></div>'}
+              ${m.poster_path ? `<img src="${posterURL(m.poster_path)}" width="154" height="231" class="movie-poster" alt="${mediaTitle}" />` : '<div style="width:154px;height:231px;background:#e2e8f0;border-radius:12px;"></div>'}
               <div class="movie-info">
-                <h3>${m.title} ${m.release_date ? `(${m.release_date.slice(0,4)})` : ''}</h3>
+                <h3>${mediaIcon} ${mediaTitle} ${mediaYear ? `(${mediaYear})` : ''}</h3>
                 <div class="overview">${m.overview || 'Nema opisa dostupnog.'}</div>
               </div>
             </div>
