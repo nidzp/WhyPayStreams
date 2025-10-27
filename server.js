@@ -2,10 +2,14 @@ import 'dotenv/config';
 import express from 'express';
 import fetch from 'node-fetch';
 import cors from 'cors';
+import TorrentSearchApi from 'torrent-search-api';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Konfiguracija torrent pretraživača
+TorrentSearchApi.enablePublicProviders(); // Omogući sve javne providere (1337x, ThePirateBay, YTS, itd)
 
 const TMDB = 'https://api.themoviedb.org/3';
 const TMDB_HEADERS = {
@@ -186,6 +190,51 @@ app.get('/api/offers/:imdb_or_tmdb', async (req, res) => {
   } catch (error) {
     console.error('Offers error:', error);
     res.status(500).json({ error: error.message, topFree: [], topPaid: [] });
+  }
+});
+
+// TORRENT: pretraga top 5 torrenta (legalno po Švajcarskom zakonu za lično korišćenje)
+app.get('/api/torrents/:title', async (req, res) => {
+  try {
+    const { title } = req.params;
+    const { year } = req.query; // Opciono: godina filma/serije za precizniju pretragu
+    
+    if (!title) {
+      return res.status(400).json({ error: 'Title parameter is required' });
+    }
+
+    console.log(`🔍 Searching torrents for: ${title}${year ? ` (${year})` : ''}`);
+    
+    // Pretraga torrenta - dodaj godinu ako postoji
+    const searchQuery = year ? `${title} ${year}` : title;
+    const torrents = await TorrentSearchApi.search(searchQuery, 'Movies', 10);
+    
+    // Sortiraj po seeders (više je bolje) i uzmi top 5
+    const top5 = torrents
+      .filter(t => t.magnet || t.link) // Uzmi samo one sa magnet linkom ili download linkom
+      .sort((a, b) => (b.seeds || 0) - (a.seeds || 0))
+      .slice(0, 5)
+      .map(t => ({
+        title: t.title,
+        size: t.size || 'N/A',
+        seeds: t.seeds || 0,
+        peers: t.peers || 0,
+        magnet: t.magnet || null,
+        link: t.link || null,
+        provider: t.provider || 'Unknown',
+        time: t.time || null
+      }));
+
+    console.log(`✅ Found ${top5.length} torrent results`);
+    
+    res.json({
+      query: searchQuery,
+      results: top5,
+      disclaimer: '⚠️ Ovi linkovi su za lično korišćenje u skladu sa Švajcarskim zakonom. WhyPayStreams ne hostuje niti distribuira zaštićen sadržaj.'
+    });
+  } catch (error) {
+    console.error('Torrent search error:', error);
+    res.status(500).json({ error: error.message, results: [] });
   }
 });
 

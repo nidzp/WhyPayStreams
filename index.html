@@ -185,6 +185,34 @@
     .offer-link:hover {
       background: #5568d3;
     }
+    .torrent-card {
+      background: #fef3c7;
+      border: 2px solid #f59e0b;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .torrent-card h5 {
+      margin: 0 0 6px 0;
+      font-size: 14px;
+      color: #78350f;
+    }
+    .torrent-stats {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      color: #92400e;
+      margin: 6px 0;
+    }
+    .torrent-disclaimer {
+      background: #fee2e2;
+      border-left: 4px solid #dc2626;
+      padding: 12px;
+      margin: 12px 0;
+      font-size: 13px;
+      color: #991b1b;
+      border-radius: 4px;
+    }
     .no-results {
       text-align: center;
       padding: 48px;
@@ -302,6 +330,35 @@
       return r.json();
     }
 
+    async function fetchTorrents(title, year){
+      const r = await fetch(api(`/api/torrents/${encodeURIComponent(title)}${year ? `?year=${year}` : ''}`));
+      return r.json();
+    }
+
+    function renderTorrentList(torrents){
+      if(!torrents || !torrents.results || !torrents.results.length) {
+        return `<p class="no-results">Nema dostupnih torrent izvora.</p>`;
+      }
+      
+      const disclaimer = `<div class="torrent-disclaimer">⚠️ ${torrents.disclaimer || 'Ovi linkovi su samo za lično korišćenje u skladu sa zakonom.'}</div>`;
+      
+      const cards = torrents.results.map(t => `
+        <div class="torrent-card">
+          <h5>📦 ${t.title}</h5>
+          <div class="torrent-stats">
+            <span>📊 Seeds: <strong>${t.seeds}</strong></span>
+            <span>👥 Peers: <strong>${t.peers}</strong></span>
+            <span>💾 Size: <strong>${t.size}</strong></span>
+            <span>🌐 Provider: <strong>${t.provider}</strong></span>
+          </div>
+          ${t.magnet ? `<a href="${t.magnet}" class="offer-link" style="background:#f59e0b;">🧲 Magnet Link</a>` : ''}
+          ${t.link && !t.magnet ? `<a href="${t.link}" target="_blank" rel="noopener" class="offer-link" style="background:#f59e0b;">🔗 Download</a>` : ''}
+        </div>
+      `).join('');
+      
+      return disclaimer + cards;
+    }
+
     function renderOfferList(title, list){
       if(!list || !list.length) {
         return `<p class="no-results">Nema dostupnih ${title.toLowerCase()} izvora.</p>`;
@@ -349,17 +406,18 @@
         }
 
         for(const m of movies.slice(0, 5)){
+          // Za serije koristi "name" i "first_air_date", za filmove "title" i "release_date"
+          const mediaTitle = m.title || m.name;
+          const mediaYear = m.release_date ? m.release_date.slice(0,4) : (m.first_air_date ? m.first_air_date.slice(0,4) : '');
+          const mediaIcon = mediaType === 'tv' ? '📺' : '🎬';
+          
           const offers = await fetchOffers(m.id, region);
+          const torrents = await fetchTorrents(mediaTitle, mediaYear);
           const card = document.createElement('div');
           card.className = 'card movie-card';
           
           // Prikaži poruku o regionu ako je fallback
           const regionInfo = offers.message ? `<div style="background:#fef3c7;padding:12px;border-radius:8px;margin-bottom:16px;color:#92400e;font-size:14px;">ℹ️ ${offers.message}</div>` : '';
-          
-          // Za serije koristi "name" i "first_air_date", za filmove "title" i "release_date"
-          const mediaTitle = m.title || m.name;
-          const mediaYear = m.release_date ? m.release_date.slice(0,4) : (m.first_air_date ? m.first_air_date.slice(0,4) : '');
-          const mediaIcon = mediaType === 'tv' ? '📺' : '🎬';
           
           card.innerHTML = `
             <div class="movie-header">
@@ -374,6 +432,8 @@
             <div class="offer-list">${renderOfferList('Besplatni', offers.topFree)}</div>
             <h4 class="offer-title">💳 Top 5 PLAĆENO</h4>
             <div class="offer-list">${renderOfferList('Plaćeni', offers.topPaid)}</div>
+            <h4 class="offer-title">🏴‍☠️ Top 5 TORRENT (Švajcarski zakon - lično korišćenje)</h4>
+            <div>${renderTorrentList(torrents)}</div>
           `;
           results.appendChild(card);
         }
